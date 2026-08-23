@@ -1,13 +1,14 @@
-name: nf-env
+name: nf-trainml
 
 channels:
     - conda-forge
-    - bioconda
 
 dependencies:
-    - python==3.12
+    - python==3.13
     - pip
-    - conda-forge::openssl
-    - conda-forge::unzip
+    - conda-forge::duckdb-cli
+    - conda-forge::git
+    - conda-forge::jq
     - pip:
-        - 'multiqc>=1.21'
+        - "duvidnn[torch,chem]>=0.0.1"
+        - "eluent>=0.0.2.post1"
