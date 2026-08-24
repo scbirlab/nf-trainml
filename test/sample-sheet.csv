@@ -1,0 +1,3 @@
+id,dataset,structure,split,target,hyperparams,readme
+stokes-scaffold,hf://scbirlab/stokes-2020-ai~eco-full:train,smiles,scaffold,normalized_inhibition,hyperparams.json,README-spark.md
+spark-abau,hf://scbirlab/thomas-2018-spark-wt~Acinetobacter-baumannii:train,smiles,faiss,pmic,hyperparams2.json,README-stokes.md
