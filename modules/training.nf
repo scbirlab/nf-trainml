@@ -6,7 +6,9 @@ process train_initial_model {
     label "train"
 
     // errorStrategy 'retry'  // sometimes GPU fails
-    // maxRetries 3
+    errorStrategy { sleep(Math.pow(2, task.attempt) * 200 as long); return 'retry' }
+    maxRetries 3
+    // beforeScript 'sleep \$((RANDOM % 60))'
 
     publishDir(
         "${params.outputs}", 
@@ -24,7 +26,8 @@ process train_initial_model {
     tuple val( id ), path( "*.dv" ), emit: checkpoint
     tuple val( id ), path( "*.dv/*.{csv,png,json}" ), emit: eval
     tuple val( id ), val( config_i ), path( "*.dv/metrics.csv" ), emit: metrics
-
+    
+    
     script:
     """
     duckdb -c "

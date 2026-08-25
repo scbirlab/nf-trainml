@@ -310,7 +310,7 @@ workflow init {
   best_model.out.best
     .map { v -> v[1] }
     .splitCsv( header: true )
-    .map { v -> [ v.id, v.config_i.toInteger() ] }
+    .map { v -> [ v.id, new BigDecimal(v.config_i).round(0).toInteger() ] }
     .set { best_config_ch }
 
   SplitDataFinal.out.main 
