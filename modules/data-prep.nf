@@ -4,6 +4,14 @@ process SplitDataRemote {
     label "big_time"
     containerOptions { "-v ${params.cache}:${params.cache}" }
 
+    errorStrategy {
+        if (task.attempt > 1)
+            sleep(5000 * task.attempt)
+
+        'retry'
+    }
+    maxRetries 2
+
     publishDir(
         "${params.outputs}/${id}/splits", 
         mode: 'copy',
@@ -45,7 +53,7 @@ process SplitDataRemote {
     """
     set -eoux pipefail
 
-    XDG_CACHE_HOME="${cache}" ELUENT_CACHE="${cache}" eluent split \
+    eluent split \
         "${dataset}" \
         --train "${split_p.train}" \
         --validation "${split_p.val}" \
@@ -108,6 +116,14 @@ process SplitDataFinal {
     label "big_time"
     containerOptions { "-v ${params.cache}:${params.cache}" }
 
+    errorStrategy {
+        if (task.attempt > 1)
+            sleep(5000 * task.attempt)
+
+        'retry'
+    }
+    maxRetries 2
+
     publishDir(
         "${params.outputs}/${id}/best-model/data",
         mode: 'copy',
@@ -148,7 +164,7 @@ process SplitDataFinal {
     """
     set -eoux pipefail
 
-    XDG_CACHE_HOME="${cache}" ELUENT_CACHE="${cache}" eluent split \
+    eluent split \
         "${dataset}" \
         --train "${split_p.train}" \
         --validation "${split_p.val}" \

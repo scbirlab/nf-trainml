@@ -3,14 +3,13 @@
         [["clogp"]], 
         [["full_strain_name:hash"]], 
         [["full_strain_name_with_genotype:vectome-fingerprint"]], 
-        [["full_strain_name:hash"]], 
         [
             ["clogp"], 
             ["full_strain_name_with_genotype:hash"]
         ], 
         [
             ["clogp"], 
-            ["full_strain_name:hash"]
+            ["full_strain_name:vectome-fingerprint"]
         ]
     ],
     "context": [
