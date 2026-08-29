@@ -69,6 +69,9 @@ log.info """${pipeline_name}
 */
 
 include { 
+  CreateSharedCache;
+} from './modules/cache.nf'
+include { 
   split_data_remote as SplitDataRemote;
   split_data_remote as SplitDataLocal;
   SplitDataFinal;
@@ -153,6 +156,11 @@ workflow init {
     .unique()
     .set { hyperparam_ch }
 
+  CreateSharedCache(
+    csv_rows.map { v -> v[0] }.unique()
+  )
+    .set { cache_ch }
+
   sample_sheet
     .splitCsv( header: true )
     .filter { v -> v.containsKey("readme") }
@@ -166,7 +174,7 @@ workflow init {
     .unique()
     .set { id2template_ch }
 
-  Hyperprep( hyperparam_ch )
+  Hyperprep( hyperparam_ch.combine( cache_ch, by: 0 ) )
 
   Hyperprep.out.grid
     .combine(
@@ -198,21 +206,22 @@ workflow init {
           v[1], 
           checkIfExists: true,
         ) 
-      ] + v[2..-1] },
+      ] + v[2..-1] }
+      .combine ( cache_ch, by: 0 ),
     split_fracs,
     knn,
     n_partitions,
     Channel.value( params.skip_plot ),
   )  // id, split_method, [pool, val, test]
   SplitDataRemote( 
-    data_ch.remote,
+    data_ch.remote.combine ( cache_ch, by: 0 ),
     split_fracs,
     knn,
     n_partitions,
     Channel.value( params.skip_plot ),
   )  // test_val -> id, split_method, [test, val] // pool -> id, split_method, pool
   SplitDataFinal(
-    unbranched_data_ch,
+    unbranched_data_ch.combine ( cache_ch, by: 0 ),
     split_fracs,
     knn,
     n_partitions,
@@ -294,7 +303,7 @@ workflow init {
         v[3].config,
         v[3].config_i,
       ] }
-      .unique(),
+      .unique().combine ( cache_ch, by: 0 ),
     epochs,
   )  // [id, split_rep, init_rep], init_model
 
@@ -338,7 +347,7 @@ workflow init {
         v[3].config,
         v[3].config_i,
       ] }
-      .unique(),
+      .unique().combine ( cache_ch, by: 0 ),
     epochs,
   )  // [id, split_rep, init_rep], init_model
 
@@ -356,7 +365,7 @@ workflow init {
     .set { initial_model }
 
   emit:
-  TrainFinal
+  initial_model
 
 }
 

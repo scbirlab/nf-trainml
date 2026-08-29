@@ -2,7 +2,7 @@
     "features": [
         [["clogp"]], 
         [["full_strain_name:hash"]], 
-        [["full_strain_name_with_genotype:hash"]], 
+        [["full_strain_name_with_genotype:vectome-fingerprint"]], 
         [["full_strain_name:hash"]], 
         [
             ["clogp"], 

@@ -26,7 +26,7 @@ process split_data_remote {
 
     // id, dataset, structure, split method, split_rep
     input:
-    tuple val( id ), val( dataset ), val( structure ), val( split_method ), val( split_rep )
+    tuple val( id ), val( dataset ), val( structure ), val( split_method ), val( split_rep ), path( cache )
     val split_p
     val knn
     val n_partitions
@@ -42,9 +42,7 @@ process split_data_remote {
     """
     set -eoux pipefail
 
-    mkdir cache
-
-    XDG_CACHE_HOME=cache ELUENT_CACHE=cache eluent split \
+    XDG_CACHE_HOME="${cache}" ELUENT_CACHE="${cache}" eluent split \
         "${dataset}" \
         --train "${split_p.train}" \
         --validation "${split_p.val}" \
@@ -54,7 +52,7 @@ process split_data_remote {
         --type "${split_method}" \
         -k ${knn} \
         --seed "${split_rep}" \
-        --cache cache \
+        --cache "${cache}" \
         --output data.parquet \
         --plot-seed 0 \
         ${skip_plot ? "" : "--plot split-plot.png"}
@@ -96,8 +94,6 @@ process split_data_remote {
         rm -rf "\${g}"
         done
     done
-
-    rm -rf cache
 
     """
 
@@ -131,7 +127,7 @@ process SplitDataFinal {
 
     // id, dataset, structure, split method, split_rep
     input:
-    tuple val( id ), val( dataset ), val( structure ), val( split_method )
+    tuple val( id ), val( dataset ), val( structure ), val( split_method ), path( cache )
     val split_p
     val knn
     val n_partitions
@@ -146,9 +142,7 @@ process SplitDataFinal {
     """
     set -eoux pipefail
 
-    mkdir cache
-
-    XDG_CACHE_HOME=cache ELUENT_CACHE=cache eluent split \
+    XDG_CACHE_HOME="${cache}" ELUENT_CACHE="${cache}" eluent split \
         "${dataset}" \
         --train "${split_p.train}" \
         --validation "${split_p.val}" \
@@ -157,7 +151,7 @@ process SplitDataFinal {
         --type "${split_method}" \
         -k ${knn} \
         --seed 42 \
-        --cache cache \
+        --cache "${cache}" \
         --output data.parquet \
         --plot-seed 0 \
         ${skip_plot ? "" : "--plot split-plot.png"}
@@ -199,66 +193,6 @@ process SplitDataFinal {
         rm -rf "\${g}"
         done
     done
-
-    rm -rf cache
-
-    """
-
-}
-
-process split_data_local {
-
-    tag "${id}.${split_rep}:${split_method}"
-    label "big_time"
-
-    publishDir(
-        "${params.outputs}", 
-        mode: 'copy',
-        saveAs: { "${id}/method_${split_method}/seed_${split_rep}/${it}" },
-    )
-
-    // id, dataset, structure, split method, split_rep
-    input:
-    tuple val( id ), path( dataset ), val( structure ), val( split_method ), val( split_rep )
-    val split_p
-    val knn
-
-    // id, split_rep, [pool, val, test]
-    output:
-    tuple val( id ), val( split_rep ), path( "data_*.parquet" ), emit: data
-    tuple val( id ), val( split_rep ), path( "split-plot.{png,csv}" ), emit: plot
-
-    script:
-    """
-    XDG_HOME=cache HF_HOME=cache eluent split \
-        "${dataset}" \
-        --train "${split_p.pool}" \
-        --validation "${split_p.val}" \
-        --test "${split_p.test}" \
-        --structure "${structure}" \
-        --type "${split_method}" \
-        -k ${knn} \
-        --seed "${split_rep}" \
-        --cache cache \
-        --output data.parquet \
-        --plot-seed 0 \
-        --plot split-plot.png
-
-    for f in fold_*/data_train.parquet
-    do
-        duckdb -c '
-            PRAGMA threads=${task.cpus};
-            COPY (
-                SELECT 
-                    row_number() OVER () AS rowid, 
-                    *
-                FROM read_parquet("'"\$f"'")
-            ) TO "data_train-indexed.parquet" (FORMAT Parquet);
-        '
-        rm "\$f" && mv "data_train-indexed.parquet" "\$f"
-    done
-
-    rm -rf cache
 
     """
 
