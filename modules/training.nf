@@ -4,12 +4,11 @@ process train_initial_model {
     tag "${id}:${xy.target}:${config_i}"
     // label "gpu_single"
     label "train"
+    containerOptions { "-v ${params.cache}:${params.cache}" }
 
     // errorStrategy 'retry'  // sometimes GPU fails
     // errorStrategy { sleep(Math.pow(2, task.attempt) * 200 as long); return 'retry' }
     // maxRetries 3
-    // beforeScript 'sleep \$((RANDOM % 60))'
-
     publishDir(
         "${params.outputs}", 
         mode: 'copy', 
@@ -19,14 +18,14 @@ process train_initial_model {
 
     // [id, split_rep, init_rep], [structure, target], [pool, val, test]
     input:
-    tuple val( id ), path( pool, stageAs: 'pool/*' ), path( validation ), path( test ), val( xy ), path( model_config ), val( config_i ), path( cache )
+    tuple val( id ), path( pool, stageAs: 'pool/*' ), path( validation ), path( test ), val( xy ), path( model_config ), val( config_i )
     val epochs
+    val cache
 
     output:
     tuple val( id ), path( "*.dv" ), emit: checkpoint
     tuple val( id ), path( "*.dv/*.{csv,png,json}" ), emit: eval
     tuple val( id ), val( config_i ), path( "*.dv/metrics.csv" ), emit: metrics
-    
     
     script:
     """
@@ -62,6 +61,7 @@ process TrainFinal {
     tag "${id}:${xy.target}:${config_i}"
     // label "gpu_single"
     label "train"
+    containerOptions { "-v ${params.cache}:${params.cache}" }
 
     // errorStrategy 'retry'  // sometimes GPU fails
     // maxRetries 3
@@ -75,8 +75,9 @@ process TrainFinal {
 
     // [id, split_rep, init_rep], [structure, target], [pool, val, test]
     input:
-    tuple val( id ), path( pool, stageAs: 'train/*' ), path( validation ), path( test ), val( xy ), path( model_config ), val( config_i ), path( cache )
+    tuple val( id ), path( pool, stageAs: 'train/*' ), path( validation ), path( test ), val( xy ), path( model_config ), val( config_i )
     val epochs
+    val cache
 
     output:
     tuple val( id ), path( "*.dv" ), emit: checkpoint

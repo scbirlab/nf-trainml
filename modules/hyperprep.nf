@@ -5,9 +5,11 @@ process Hyperprep {
         "${params.outputs}/hyperparams",
         saveAs: { "${id}.${it}" },
     )
+    containerOptions { "-v ${params.cache}:${params.cache}" }
 
     input:
-    tuple val( id ), path( json ), path( cache )
+    tuple val( id ), path( json )
+    val cache
 
     output:
     tuple val( id ), path( "hyperopt/grid.json" ), emit: grid

@@ -1,7 +1,8 @@
-process split_data_remote {
+process SplitDataRemote {
 
     tag "${id}.${split_rep}:${split_method}"
     label "big_time"
+    containerOptions { "-v ${params.cache}:${params.cache}" }
 
     publishDir(
         "${params.outputs}/${id}/splits", 
@@ -23,14 +24,16 @@ process split_data_remote {
         saveAs: { "method_${split_method}/${it}" },
         pattern: "split-plot*.{png,csv}",
     )
+    containerOptions { "-v ${params.cache}:${params.cache}" }
 
     // id, dataset, structure, split method, split_rep
     input:
-    tuple val( id ), val( dataset ), val( structure ), val( split_method ), val( split_rep ), path( cache )
+    tuple val( id ), val( dataset ), val( structure ), val( split_method ), val( split_rep )
     val split_p
     val knn
     val n_partitions
     val skip_plot
+    val cache
 
     // id, split_rep, [pool, val, test]
     output:
@@ -103,6 +106,7 @@ process SplitDataFinal {
 
     tag "${id}:${split_method}${split_p}"
     label "big_time"
+    containerOptions { "-v ${params.cache}:${params.cache}" }
 
     publishDir(
         "${params.outputs}/${id}/best-model/data",
@@ -125,13 +129,15 @@ process SplitDataFinal {
         pattern: "split-plot*.{png,csv}",
     )
 
+
     // id, dataset, structure, split method, split_rep
     input:
-    tuple val( id ), val( dataset ), val( structure ), val( split_method ), path( cache )
+    tuple val( id ), val( dataset ), val( structure ), val( split_method )
     val split_p
     val knn
     val n_partitions
     val skip_plot
+    val cache
 
     // id, split_rep, [pool, val, test]
     output:

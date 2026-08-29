@@ -59,6 +59,7 @@ log.info """${pipeline_name}
             input dir.     : ${params.inputs}
             sample sheet   : ${params.sample_sheet}
          output            : ${params.outputs}
+         cache             : ${params.cache}
          """
          .stripIndent()
 
@@ -72,8 +73,8 @@ include {
   CreateSharedCache;
 } from './modules/cache.nf'
 include { 
-  split_data_remote as SplitDataRemote;
-  split_data_remote as SplitDataLocal;
+  SplitDataRemote;
+  SplitDataRemote as SplitDataLocal;
   SplitDataFinal;
 } from './modules/data-prep.nf'
 include { 
@@ -156,9 +157,17 @@ workflow init {
     .unique()
     .set { hyperparam_ch }
 
-  CreateSharedCache(
-    csv_rows.map { v -> v[0] }.unique()
-  )
+  def cache_root = file(params.cache).toAbsolutePath()
+
+  java.nio.file.Files.createDirectories( cache_root )
+
+  csv_rows
+    .map { v ->
+        def cache_dir = cache_root.resolve(v[0].toString())
+        java.nio.file.Files.createDirectories(cache_dir)
+        tuple( v[0], cache_dir.toString() )
+    }
+    .unique()
     .set { cache_ch }
 
   sample_sheet
@@ -174,7 +183,10 @@ workflow init {
     .unique()
     .set { id2template_ch }
 
-  Hyperprep( hyperparam_ch.combine( cache_ch, by: 0 ) )
+  Hyperprep( 
+    hyperparam_ch,
+    Channel.value( cache_root ),
+  )
 
   Hyperprep.out.grid
     .combine(
@@ -206,26 +218,28 @@ workflow init {
           v[1], 
           checkIfExists: true,
         ) 
-      ] + v[2..-1] }
-      .combine ( cache_ch, by: 0 ),
+      ] + v[2..-1] },
     split_fracs,
     knn,
     n_partitions,
     Channel.value( params.skip_plot ),
+    Channel.value( cache_root ),
   )  // id, split_method, [pool, val, test]
   SplitDataRemote( 
-    data_ch.remote.combine ( cache_ch, by: 0 ),
+    data_ch.remote,
     split_fracs,
     knn,
     n_partitions,
     Channel.value( params.skip_plot ),
+    Channel.value( cache_root ),
   )  // test_val -> id, split_method, [test, val] // pool -> id, split_method, pool
   SplitDataFinal(
-    unbranched_data_ch.combine ( cache_ch, by: 0 ),
+    unbranched_data_ch,
     split_fracs,
     knn,
     n_partitions,
     Channel.value( params.skip_plot ),
+    Channel.value( cache_root ),
   )
 
   SplitDataLocal.out.pool
@@ -303,8 +317,9 @@ workflow init {
         v[3].config,
         v[3].config_i,
       ] }
-      .unique().combine ( cache_ch, by: 0 ),
+      .unique(),
     epochs,
+    Channel.value( cache_root ),
   )  // [id, split_rep, init_rep], init_model
 
   stack_tables(
@@ -347,8 +362,9 @@ workflow init {
         v[3].config,
         v[3].config_i,
       ] }
-      .unique().combine ( cache_ch, by: 0 ),
+      .unique(),
     epochs,
+    Channel.value( cache_root ),
   )  // [id, split_rep, init_rep], init_model
 
   MakeReadme(
