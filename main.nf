@@ -157,18 +157,13 @@ workflow init {
     .unique()
     .set { hyperparam_ch }
 
-  def cache_root = file(params.cache).toAbsolutePath()
+  def cache_root = file(params.cache)
+    .toAbsolutePath()
+    .toString()
 
-  java.nio.file.Files.createDirectories( cache_root )
-
-  csv_rows
-    .map { v ->
-        def cache_dir = cache_root.resolve(v[0].toString())
-        java.nio.file.Files.createDirectories(cache_dir)
-        tuple( v[0], cache_dir.toString() )
-    }
-    .unique()
-    .set { cache_ch }
+  java.nio.file.Files.createDirectories(
+      java.nio.file.Paths.get( cache_root )
+  )
 
   sample_sheet
     .splitCsv( header: true )

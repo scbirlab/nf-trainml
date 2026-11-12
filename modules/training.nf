@@ -6,9 +6,9 @@ process train_initial_model {
     label "train"
     containerOptions { "-v ${params.cache}:${params.cache}" }
 
-    // errorStrategy 'retry'  // sometimes GPU fails
+    errorStrategy 'retry'  // sometimes GPU fails
     // errorStrategy { sleep(Math.pow(2, task.attempt) * 200 as long); return 'retry' }
-    // maxRetries 3
+    maxRetries 2
     publishDir(
         "${params.outputs}", 
         mode: 'copy', 
