@@ -12,6 +12,6 @@ dependencies:
     - pip:
         - "duvidnn[torch,chem,bio]>=0.0.6"
         - "eluent>=0.0.5"
-        - "arvore[trees,cat,chem]>=0.0.5"
+        - "arvore[trees,cat,chem]>=0.0.6"
         - "pandas>=2.2"
         - "pyarrow>=15"
