@@ -59,6 +59,7 @@ log.info """${pipeline_name}
             input dir.     : ${params.inputs}
             sample sheet   : ${params.sample_sheet}
          output            : ${params.outputs}
+         cache             : ${params.cache}
          """
          .stripIndent()
 
@@ -69,8 +70,11 @@ log.info """${pipeline_name}
 */
 
 include { 
-  split_data_remote as SplitDataRemote;
-  split_data_remote as SplitDataLocal;
+  CreateSharedCache;
+} from './modules/cache.nf'
+include { 
+  SplitDataRemote;
+  SplitDataRemote as SplitDataLocal;
   SplitDataFinal;
 } from './modules/data-prep.nf'
 include { 
@@ -153,6 +157,14 @@ workflow init {
     .unique()
     .set { hyperparam_ch }
 
+  def cache_root = file(params.cache)
+    .toAbsolutePath()
+    .toString()
+
+  java.nio.file.Files.createDirectories(
+      java.nio.file.Paths.get( cache_root )
+  )
+
   sample_sheet
     .splitCsv( header: true )
     .filter { v -> v.containsKey("readme") }
@@ -166,7 +178,10 @@ workflow init {
     .unique()
     .set { id2template_ch }
 
-  Hyperprep( hyperparam_ch )
+  Hyperprep( 
+    hyperparam_ch,
+    Channel.value( cache_root ),
+  )
 
   Hyperprep.out.grid
     .combine(
@@ -203,6 +218,7 @@ workflow init {
     knn,
     n_partitions,
     Channel.value( params.skip_plot ),
+    Channel.value( cache_root ),
   )  // id, split_method, [pool, val, test]
   SplitDataRemote( 
     data_ch.remote,
@@ -210,6 +226,7 @@ workflow init {
     knn,
     n_partitions,
     Channel.value( params.skip_plot ),
+    Channel.value( cache_root ),
   )  // test_val -> id, split_method, [test, val] // pool -> id, split_method, pool
   SplitDataFinal(
     unbranched_data_ch,
@@ -217,6 +234,7 @@ workflow init {
     knn,
     n_partitions,
     Channel.value( params.skip_plot ),
+    Channel.value( cache_root ),
   )
 
   SplitDataLocal.out.pool
@@ -296,6 +314,7 @@ workflow init {
       ] }
       .unique(),
     epochs,
+    Channel.value( cache_root ),
   )  // [id, split_rep, init_rep], init_model
 
   stack_tables(
@@ -310,7 +329,7 @@ workflow init {
   best_model.out.best
     .map { v -> v[1] }
     .splitCsv( header: true )
-    .map { v -> [ v.id, v.config_i.toInteger() ] }
+    .map { v -> [ v.id, new BigDecimal(v.config_i).round(0).toInteger() ] }
     .set { best_config_ch }
 
   SplitDataFinal.out.main 
@@ -340,6 +359,7 @@ workflow init {
       ] }
       .unique(),
     epochs,
+    Channel.value( cache_root ),
   )  // [id, split_rep, init_rep], init_model
 
   MakeReadme(
@@ -356,7 +376,7 @@ workflow init {
     .set { initial_model }
 
   emit:
-  TrainFinal
+  initial_model
 
 }
 

@@ -24,6 +24,7 @@ nextflow run "$script_dir"/.. \
     --sample_sheet "$script_dir"/sample-sheet.csv \
     --inputs "$script_dir"/inputs \
     --outputs "$script_dir"/outputs \
+    --cache "$script_dir"/outputs/cache \
     -c "$script_dir"/nextflow.config \
     -with-dag "$script_dir"/dag.html \
     -work-dir "$script_dir"/work

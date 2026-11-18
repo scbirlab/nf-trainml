@@ -5,9 +5,11 @@ process Hyperprep {
         "${params.outputs}/hyperparams",
         saveAs: { "${id}.${it}" },
     )
+    containerOptions { "-v ${params.cache}:${params.cache}" }
 
     input:
     tuple val( id ), path( json )
+    val cache
 
     output:
     tuple val( id ), path( "hyperopt/grid.json" ), emit: grid
@@ -18,17 +20,17 @@ process Hyperprep {
     """
     set -euox pipefail
     
-    XDG_CACHE_HOME=cache XDG_HOME=cache DUVIDNN_CACHE=cache \
+    XDG_CACHE_HOME="${cache}" DUVIDNN_CACHE="${cache}" \
     duvidnn hyperprep \
         "${json}" \
         -o hyperopt/grid.json \
     2> grid.log
 
     N_CONFIGS=\$(
-        grep '^There are ' grid.log \
+        grep -E '^\\[INFO\\] There are [0-9]+ configurations to test.\$' grid.log \
         | head -n1 \
-        | cut -f3 -d' '
+        | cut -f4 -d' '
     )
-    rm -rf cache
+
     """
 }
